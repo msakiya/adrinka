@@ -650,22 +650,22 @@
                     };
 
                     try {
-                        // 1. Intentar con la función backend de Cloudflare Pages (/api/send_email)
-                        let response = await fetch('/api/send_email', {
+                        // 1. Probar send_email.php (para hosting compartido / cPanel)
+                        let response = await fetch('send_email.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(formData)
                         }).catch(() => null);
 
-                        // 2. Si no responde (ej. servidor PHP clásico), intentar send_email.php
+                        // 2. Si no responde (ej. en Vercel o Cloudflare Pages), probar /api/send_email
                         if (!response || !response.ok) {
-                            const phpRes = await fetch('send_email.php', {
+                            const apiRes = await fetch('/api/send_email', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(formData)
                             }).catch(() => null);
-                            if (phpRes && phpRes.ok) {
-                                response = phpRes;
+                            if (apiRes && apiRes.ok) {
+                                response = apiRes;
                             }
                         }
 
