@@ -637,7 +637,7 @@
                     const originalText = btnSubmit.innerHTML;
                     
                     btnSubmit.disabled = true;
-                    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+                    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Enviando...';
                     if (formStatus) formStatus.classList.add('hidden');
 
                     const formData = {
@@ -649,119 +649,65 @@
                         page_url: window.location.href
                     };
 
-                    const bodyText = `Hola, tienes un nuevo lead en tu página:\n\n` +
-                        `DATOS DEL LEAD\n` +
-                        `Nombre: ${formData.nombre}\n` +
-                        `Teléfono: ${formData.telefono}\n` +
-                        `Correo Electrónico: ${formData.email}\n` +
-                        (formData.servicio ? `Servicio: ${formData.servicio}\n` : '') +
-                        (formData.mensaje ? `Detalle del Proyecto: ${formData.mensaje}\n` : '') +
-                        `\nEste lead, viene gracias a: ${formData.page_url}\n`;
-
-                    let isSuccess = false;
-                    let errorMsg = '';
-
-                    // 1. Probar backend PHP / Cloudflare Function
                     try {
-                        let response = await fetch('send_email.php', {
+                        // 1. Intentar con la función backend de Cloudflare Pages (/api/send_email)
+                        let response = await fetch('/api/send_email', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(formData)
                         }).catch(() => null);
 
-                        if (!response || response.status === 404) {
-                            response = await fetch('/api/send_email', {
+                        // 2. Si no responde (ej. servidor PHP clásico), intentar send_email.php
+                        if (!response || !response.ok) {
+                            const phpRes = await fetch('send_email.php', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(formData)
                             }).catch(() => null);
+                            if (phpRes && phpRes.ok) {
+                                response = phpRes;
+                            }
                         }
 
                         if (response && response.ok) {
                             const result = await response.json();
                             if (result.success) {
-                                isSuccess = true;
-                            }
-                        }
-                    } catch (err) {
-                        console.log('Backend local no disponible, enviando vía Resend API');
-                    }
-
-                    // 2. Fallback directo con la API Key de Resend (Garantiza envío incluso sin backend)
-                    if (!isSuccess) {
-                        const resendKey = atob("cmVfZHR5eHJ4Tm1fRWhUM0JtMWJlSlh5dnE5aWVRVnN5NFpt");
-                        try {
-                            let resendRes = await fetch("https://api.resend.com/emails", {
-                                method: "POST",
-                                headers: {
-                                    "Authorization": `Bearer ${resendKey}`,
-                                    "Content-Type": "application/json"
-                                },
-                                body: JSON.stringify({
-                                    from: "Adinkra Perú <carlos@adinkraperu.com>",
-                                    to: ["msakiya14@gmail.com", "adinkra9961@gmail.com"],
-                                    subject: "Nuevo lead en Servicios",
-                                    text: bodyText
-                                })
-                            });
-
-                            let resendData = await resendRes.json().catch(() => ({}));
-
-                            if (resendRes.ok) {
-                                isSuccess = true;
-                            } else {
-                                // Reintento con remitente por defecto de Resend si la verificación del dominio carlos@adinkraperu.com aún no ha concluido
-                                let fallbackRes = await fetch("https://api.resend.com/emails", {
-                                    method: "POST",
-                                    headers: {
-                                        "Authorization": `Bearer ${resendKey}`,
-                                        "Content-Type": "application/json"
-                                    },
-                                    body: JSON.stringify({
-                                        from: "Adinkra Leads <onboarding@resend.dev>",
-                                        to: ["msakiya14@gmail.com", "adinkra9961@gmail.com"],
-                                        subject: "Nuevo lead en Servicios",
-                                        text: bodyText
-                                    })
-                                });
-
-                                if (fallbackRes.ok) {
-                                    isSuccess = true;
-                                } else {
-                                    errorMsg = resendData.message || "No se pudo realizar el envío del correo.";
+                                btnSubmit.innerHTML = '<i class="fa-solid fa-circle-check"></i> ¡Mensaje Enviado!';
+                                btnSubmit.className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-md transition shadow-md flex justify-center items-center gap-2';
+                                
+                                if (formStatus) {
+                                    formStatus.className = 'text-center text-sm font-semibold p-3 rounded-md bg-green-100 text-green-800 border border-green-200 mt-3';
+                                    formStatus.innerText = '¡Gracias! Tu mensaje ha sido enviado correctamente.';
+                                    formStatus.classList.remove('hidden');
                                 }
+                                contactForm.reset();
+                            } else {
+                                throw new Error(result.message || 'No se pudo procesar el correo.');
                             }
-                        } catch (rErr) {
-                            errorMsg = rErr.message || "Error al conectar con el servidor de correo.";
+                        } else {
+                            let errorDetails = '';
+                            if (response) {
+                                const errData = await response.json().catch(() => ({}));
+                                errorDetails = errData.message;
+                            }
+                            throw new Error(errorDetails || 'No se pudo conectar con el servicio de correo.');
                         }
-                    }
-                    
-                    if (isSuccess) {
-                        btnSubmit.innerHTML = '<i class="fa-solid fa-circle-check"></i> ¡Mensaje Enviado!';
-                        btnSubmit.className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-md transition shadow-md flex justify-center items-center gap-2';
-                        
-                        if (formStatus) {
-                            formStatus.className = 'text-center text-sm font-semibold p-3 rounded-md bg-green-100 text-green-800 border border-green-200 mt-3';
-                            formStatus.innerText = '¡Gracias! Tu información ha sido enviada correctamente.';
-                            formStatus.classList.remove('hidden');
-                        }
-                        
-                        contactForm.reset();
-                    } else {
+                    } catch (error) {
+                        console.error('Error enviando formulario:', error);
                         btnSubmit.innerHTML = originalText;
                         btnSubmit.disabled = false;
                         if (formStatus) {
                             formStatus.className = 'text-center text-sm font-semibold p-3 rounded-md bg-red-100 text-red-800 border border-red-200 mt-3';
-                            formStatus.innerText = errorMsg || 'Ocurrió un error al enviar el formulario. Intenta nuevamente.';
+                            formStatus.innerText = error.message || 'Ocurrió un error al enviar. Por favor intenta más tarde.';
                             formStatus.classList.remove('hidden');
                         }
+                    } finally {
+                        setTimeout(() => {
+                            btnSubmit.disabled = false;
+                            btnSubmit.innerHTML = originalText;
+                            btnSubmit.className = 'w-full bg-brand hover:bg-brand-dark text-white font-bold py-3.5 px-4 rounded-md transition shadow-md flex justify-center items-center gap-2';
+                        }, 4000);
                     }
-
-                    setTimeout(() => {
-                        btnSubmit.disabled = false;
-                        btnSubmit.innerHTML = originalText;
-                        btnSubmit.className = 'w-full bg-brand hover:bg-brand-dark text-white font-bold py-3.5 px-4 rounded-md transition shadow-md flex justify-center items-center gap-2';
-                    }, 4000);
                 });
             }
         });
