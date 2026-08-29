@@ -50,7 +50,7 @@ export async function onRequestPost(context) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Adrinka Perú <carlos@adinkraperu.com>",
+          from: "Adinkra Perú <carlos@adinkraperu.com>",
           to: ["msakiya14@gmail.com", "adinkra9961@gmail.com"],
           subject: "Nuevo lead en Servicios",
           text: bodyText,
@@ -74,7 +74,7 @@ export async function onRequestPost(context) {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              from: "Adrinka Leads <onboarding@resend.dev>",
+              from: "Adinkra Leads <onboarding@resend.dev>",
               to: ["msakiya14@gmail.com", "adinkra9961@gmail.com"],
               subject: "Nuevo lead en Servicios",
               text: bodyText,
