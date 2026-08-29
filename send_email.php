@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Leer datos enviados (soporta JSON o POST clásico)
+// Leer datos enviados
 $raw_input = file_get_contents('php://input');
 $data = json_decode($raw_input, true);
 
@@ -26,15 +26,14 @@ if (!$data) {
 
 $nombre   = isset($data['nombre']) ? trim($data['nombre']) : '';
 $telefono = isset($data['telefono']) ? trim($data['telefono']) : '';
-$whatsapp = isset($data['whatsapp']) ? trim($data['whatsapp']) : '';
 $email    = isset($data['email']) ? trim($data['email']) : '';
 $servicio = isset($data['servicio']) ? trim($data['servicio']) : '';
 $mensaje  = isset($data['mensaje']) ? trim($data['mensaje']) : '';
 $page_url = isset($data['page_url']) && !empty($data['page_url']) ? trim($data['page_url']) : ($_SERVER['HTTP_REFERER'] ?? 'Desconocida');
 
-if (empty($nombre) || empty($telefono) || empty($whatsapp)) {
+if (empty($nombre) || empty($telefono) || empty($email)) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Los campos Nombre, Teléfono y WhatsApp son obligatorios.']);
+    echo json_encode(['success' => false, 'message' => 'Los campos Nombre, Teléfono y Correo Electrónico son obligatorios.']);
     exit;
 }
 
@@ -48,23 +47,20 @@ $body  = "Hola, tienes un nuevo lead en tu página:\n\n";
 $body .= "DATOS DEL LEAD\n";
 $body .= "Nombre: " . $nombre . "\n";
 $body .= "Teléfono: " . $telefono . "\n";
-$body .= "WhatsApp: " . $whatsapp . "\n";
+$body .= "Correo Electrónico: " . $email . "\n";
 
-if (!empty($email)) {
-    $body .= "Email: " . $email . "\n";
-}
 if (!empty($servicio)) {
     $body .= "Servicio: " . $servicio . "\n";
 }
 if (!empty($mensaje)) {
-    $body .= "Mensaje: " . $mensaje . "\n";
+    $body .= "Detalle del Proyecto: " . $mensaje . "\n";
 }
 
 $body .= "\nEste lead, viene gracias a: " . $page_url . "\n";
 
 // Encabezados del correo
-$headers  = "From: " . $from . "\r\n";
-$headers .= "Reply-To: " . (!empty($email) ? $email : $from) . "\r\n";
+$headers  = "From: Adinkra Perú <" . $from . ">\r\n";
+$headers .= "Reply-To: " . $email . "\r\n";
 $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
 $headers .= "MIME-Version: 1.0\r\n";
 $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
