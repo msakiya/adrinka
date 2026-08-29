@@ -657,25 +657,50 @@
                     };
 
                     try {
-                        let endpoint = 'send_email.php';
-                        let response = await fetch(endpoint, {
+                        let response = await fetch('send_email.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(formData)
                         }).catch(() => null);
 
-                        // Si send_email.php da 404 (ej. en Cloudflare Pages estático), probar la función de Cloudflare /api/send_email
+                        // Si send_email.php no existe (ej. en Cloudflare), probar la función /api/send_email
                         if (!response || response.status === 404) {
                             response = await fetch('/api/send_email', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(formData)
+                            }).catch(() => null);
+                        }
+
+                        // Si no hay backend (Cloudflare de solo archivos estáticos), enviar vía Web3Forms API directa
+                        let isSuccess = false;
+                        let errorMsg = '';
+
+                        if (response && response.ok) {
+                            const result = await response.json();
+                            isSuccess = result.success;
+                            errorMsg = result.message;
+                        } else {
+                            // Fallback directo Web3Forms
+                            const web3Key = window.WEB3FORMS_KEY || "YOUR_WEB3FORMS_KEY";
+                            const messageBody = `Hola, tienes un nuevo lead en tu página:\n\nDATOS DEL LEAD\nNombre: ${formData.nombre}\nTeléfono: ${formData.telefono}\nWhatsApp: ${formData.whatsapp}\n${formData.email ? 'Email: ' + formData.email + '\n' : ''}${formData.servicio ? 'Servicio: ' + formData.servicio + '\n' : ''}${formData.mensaje ? 'Mensaje: ' + formData.mensaje + '\n' : ''}\nEste lead, viene gracias a: ${formData.page_url}`;
+
+                            const web3Res = await fetch("https://api.web3forms.com/submit", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                                body: JSON.stringify({
+                                    access_key: web3Key,
+                                    subject: "Nuevo lead en Servicios",
+                                    from_name: "carlos@adrinkraperu.com",
+                                    message: messageBody
+                                })
                             });
+                            const web3Result = await web3Res.json();
+                            isSuccess = web3Result.success;
+                            errorMsg = web3Result.message;
                         }
                         
-                        const result = await response.json();
-                        
-                        if (response.ok && result.success) {
+                        if (isSuccess) {
                             btnSubmit.innerHTML = '<i class="fa-solid fa-circle-check"></i> ¡Mensaje Enviado!';
                             btnSubmit.className = 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-md transition shadow-md flex justify-center items-center gap-2';
                             
@@ -687,7 +712,7 @@
                             
                             contactForm.reset();
                         } else {
-                            throw new Error(result.message || 'Error al procesar el envío.');
+                            throw new Error(errorMsg || 'Error al procesar el envío.');
                         }
                     } catch (error) {
                         console.error('Error enviando el formulario:', error);
