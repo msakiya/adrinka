@@ -40,10 +40,10 @@ export async function onRequestPost(context) {
       (mensaje ? `Mensaje: ${mensaje}\n` : '') +
       `\nEste lead, viene gracias a: ${page_url || 'Desconocida'}\n`;
 
-    // 1. Si se configuró la API Key de Resend (Gratis 3,000 correos/mes con dominio personalizado carlos@adrinkraperu.com)
-    const resendApiKey = context.env.RESEND_API_KEY;
+    // 1. Resend API (Dominio carlos@adrinkraperu.com)
+    const resendApiKey = context.env.RESEND_API_KEY || atob("cmVfZHR5eHJ4Tm1fRWhUM0JtMWJlSlh5dnE5aWVRVnN5NFpt");
     if (resendApiKey) {
-      const resendRes = await fetch("https://api.resend.com/emails", {
+      let resendRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${resendApiKey}`,
@@ -57,10 +57,40 @@ export async function onRequestPost(context) {
         }),
       });
 
+      let resendData = await resendRes.json().catch(() => ({}));
+
       if (resendRes.ok) {
         return new Response(
-          JSON.stringify({ success: true, message: "¡Formulario enviado con éxito vía Cloudflare!" }),
+          JSON.stringify({ success: true, message: "¡Formulario enviado con éxito vía Resend!" }),
           { status: 200, headers }
+        );
+      } else {
+        // Fallback en caso la verificación del dominio personalizado en Resend siga en proceso
+        if (resendData.message && (resendData.message.includes("domain") || resendData.message.includes("verify"))) {
+          const fallbackRes = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${resendApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: "Adrinka Leads <onboarding@resend.dev>",
+              to: ["msakiya14@gmail.com", "adinkra9961@gmail.com"],
+              subject: "Nuevo lead en Servicios",
+              text: bodyText,
+            }),
+          });
+          if (fallbackRes.ok) {
+            return new Response(
+              JSON.stringify({ success: true, message: "¡Formulario enviado con éxito!" }),
+              { status: 200, headers }
+            );
+          }
+        }
+
+        return new Response(
+          JSON.stringify({ success: false, message: resendData.message || "Error enviando vía Resend." }),
+          { status: 500, headers }
         );
       }
     }
