@@ -40,7 +40,7 @@ if (empty($nombre) || empty($telefono) || empty($whatsapp)) {
 
 // Configuración de envíos
 $to      = 'msakiya14@gmail.com, adinkra9961@gmail.com';
-$from    = 'carlos@adrinkraperu.com';
+$from    = 'carlos@adinkraperu.com';
 $subject = 'Nuevo lead en Servicios';
 
 // Construcción del mensaje según la estructura solicitada

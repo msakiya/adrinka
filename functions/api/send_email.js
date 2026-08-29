@@ -40,7 +40,7 @@ export async function onRequestPost(context) {
       (mensaje ? `Mensaje: ${mensaje}\n` : '') +
       `\nEste lead, viene gracias a: ${page_url || 'Desconocida'}\n`;
 
-    // 1. Resend API (Dominio carlos@adrinkraperu.com)
+    // 1. Resend API (Dominio carlos@adinkraperu.com)
     const resendApiKey = context.env.RESEND_API_KEY || atob("cmVfZHR5eHJ4Tm1fRWhUM0JtMWJlSlh5dnE5aWVRVnN5NFpt");
     if (resendApiKey) {
       let resendRes = await fetch("https://api.resend.com/emails", {
@@ -50,7 +50,7 @@ export async function onRequestPost(context) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Adrinka Perú <carlos@adrinkraperu.com>",
+          from: "Adrinka Perú <carlos@adinkraperu.com>",
           to: ["msakiya14@gmail.com", "adinkra9961@gmail.com"],
           subject: "Nuevo lead en Servicios",
           text: bodyText,
@@ -104,7 +104,7 @@ export async function onRequestPost(context) {
         body: JSON.stringify({
           access_key: web3Key,
           subject: "Nuevo lead en Servicios",
-          from_name: "carlos@adrinkraperu.com",
+          from_name: "carlos@adinkraperu.com",
           message: bodyText,
           to_email: "msakiya14@gmail.com, adinkra9961@gmail.com"
         }),
