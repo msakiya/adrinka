@@ -657,11 +657,21 @@
                     };
 
                     try {
-                        const response = await fetch('send_email.php', {
+                        let endpoint = 'send_email.php';
+                        let response = await fetch(endpoint, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(formData)
-                        });
+                        }).catch(() => null);
+
+                        // Si send_email.php da 404 (ej. en Cloudflare Pages estático), probar la función de Cloudflare /api/send_email
+                        if (!response || response.status === 404) {
+                            response = await fetch('/api/send_email', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(formData)
+                            });
+                        }
                         
                         const result = await response.json();
                         
